@@ -110,11 +110,6 @@ def main():
         episode = input("Enter the episode(s) you want to download: ")
         try:
             episode = int(episode) if episode else None
-            if episode is None:
-                print("Downloading the latest episode...")
-            else:
-                print(f"Downloading {episode} episode...")
-
             if mkdir is None:
                 mkdir = False
             release_playlist.download_episode(episode, path_to_downloads, mkdir)
@@ -122,15 +117,6 @@ def main():
             episode_start, episode_stop = [i for i in episode.split(':')]
             episode_start = int(episode_start) if episode_start else None
             episode_stop = int(episode_stop) if episode_stop else None
-            if episode_start is None:
-                print("Downloading episodes from 1", end='')
-            else:
-                print(f"Downloading episodes from {episode_start}", end='')
-            if episode_stop is None:
-                print(" to last...")
-            else:
-                print(f" to {episode_stop}...")
-
             if mkdir is None:
                 mkdir = True
             release_playlist.download_episodes(
@@ -140,7 +126,6 @@ def main():
                 mkdir
             )
 
-        print("Download completed.")
     elif args.download_auto:
         library.update_and_save_all_db(path_to_db)
         try:
@@ -153,7 +138,7 @@ def main():
         for animevost_instance in updated_releases:
             release = animevost_instance.release
             title = release.title
-            print(f"Downloading the latest episode of the '{title}' release...")
+            print(f"Downloading the episode of the '{title}' release...")
             animevost_instance.playlist.download_episode()
     elif args.list_db:
         library.print_db(path_to_db)

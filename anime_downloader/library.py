@@ -6,6 +6,7 @@ from typing import Union, Optional
 
 import requests
 from bs4 import BeautifulSoup
+from rich.progress import Progress
 
 from .exceptions import *
 
@@ -181,9 +182,32 @@ def get_site(link: str, /, params: Optional[dict] = None) -> BeautifulSoup:
     return BeautifulSoup(site.text, 'html.parser')
 
 
-def download(filename: str, link: str):
-    """Download the file, overwriting it if exists."""
-    with open(filename, 'wb') as file:
-        f = requests.get(link)
-        f.raise_for_status()
-        file.write(f.content)
+def download(
+    filename: str,
+    link: str,
+    /, *,
+    download_bar: bool = True,
+    text: str = 'Downloading...',
+    text_end: str = '\n'
+):
+    """Downloads a file.
+
+    Prints the text to the progress bar or prints the text if it is disabled
+    or information about the size of the downloaded file was not received.
+    """
+    response = requests.get(link, stream=True)
+    size = response.headers.get('Content-Length')
+    if size is not None:
+        size = int(size)
+
+    if size is None or not download_bar:
+        print(text, end=text_end)
+        with open(filename, 'xb') as f:
+            f.write(response.content)
+    else:
+        with Progress(transient=True) as progress:
+            task = progress.add_task(text, total=100)
+            with open(filename, 'xb') as f:
+                for data in response.iter_content(chunk_size=size//100):
+                    f.write(data)
+                    progress.update(task, advance=1)

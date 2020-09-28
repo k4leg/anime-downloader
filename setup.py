@@ -24,7 +24,7 @@ setup(
     long_description_content_type='text/markdown',
     keywords='anime',
     python_requires='>=3.8',
-    requires=['requests', 'beautifulsoup4'],
+    requires=['beautifulsoup4', 'requests', 'rich'],
     packages=find_packages(),
     scripts=['anime-downloader']
 )

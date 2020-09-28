@@ -290,7 +290,8 @@ class AnimevostPlaylist:
         episode = self.playlist.index(link) + 1
         library.download(
             os.path.join(downloads, f'{self.id}_{episode}.mp4'),
-            link
+            link,
+            text=f"Downloading episode {episode}"
         )
 
     def download_episodes(
@@ -310,7 +311,9 @@ class AnimevostPlaylist:
         for link in self.playlist[episode_start:episode_stop]:
             episode = self.playlist.index(link) + 1
             library.download(
-                os.path.join(downloads, f'{self.id}_{episode}.mp4'), link
+                os.path.join(downloads, f'{self.id}_{episode}.mp4'),
+                link,
+                text='Downloading episode {episode}'
             )
 
     def update(self):
