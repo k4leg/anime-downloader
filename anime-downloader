@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""The command interface for the anime_downloader module."""
 
 import os
 

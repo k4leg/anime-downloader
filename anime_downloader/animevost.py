@@ -44,10 +44,10 @@ ANIMEVOST_LINK = 'https://animevost.org'
 
 class Release(metaclass=ABCMeta):
     """
-    Instance of this class contain the attributes of the link to the release
-    and the title of the release.  The release name can be taken from the link
-    by implementing the _get_title method and if the release name has been
-    passed then unnecessary actions for calling the _get_title method are not
+    Instance of this class contain the attributes of the 'link' to the release
+    and the 'title' of the release.  The release name can be taken from the link
+    by implementing the '_get_title' method and if the release name has been
+    passed then unnecessary actions for calling the '_get_title' method are not
     done.
     """
 
@@ -71,7 +71,7 @@ class Release(metaclass=ABCMeta):
 
 
 class AnimevostRelease(Release):
-    """Release wrapper that implement the _get_title method."""
+    """Release wrapper that implement the '_get_title' method."""
 
     @staticmethod
     def _get_title(link: str) -> str:
@@ -83,8 +83,8 @@ class AnimevostRelease(Release):
 
 class Animevost:
     """
-    Instance of this class contains the release and playlist attributes, which
-    are implemented as AnimevostRelease and AnimevostPlaylist.
+    Instance of this class contains the 'release' and 'playlist' attributes,
+    which are implemented as AnimevostRelease and AnimevostPlaylist.
     """
 
     def __init__(
@@ -193,7 +193,7 @@ class Animevost:
 class AnimevostSearchQuery:
     """Represent a search query object. This type object is immutable.
 
-    Instance of this class contain a releases attribute which contains a
+    Instance of this class contain a 'releases' attribute which contains a
     tuple containing objects of type AnimevostRelease.
     """
 
@@ -262,7 +262,7 @@ class AnimevostSearchQuery:
 
 
 class AnimevostPlaylist:
-    """Instance of this class contain an id attribute that depends on the
+    """Instance of this class contain an 'id' attribute that depends on the
     release.
 
     This class exports the following methods:

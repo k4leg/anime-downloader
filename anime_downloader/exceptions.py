@@ -17,7 +17,6 @@ This module exports the following exceptions:
 
 
 class AnimevostParserException(Exception):
-    """"""  # FIXME
     error_message = ""
 
     def __str__(self):

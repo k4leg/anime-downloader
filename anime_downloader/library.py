@@ -30,8 +30,8 @@ from .exceptions import *
 class Playlist:
     """Represent a playlist object.
 
-    Instance of this class contain the playlist attribute that contains a list
-    of links.
+    Instance of this class contain the 'playlist' attribute that contains a
+    list of links.
     """
 
     def __init__(
