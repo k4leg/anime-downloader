@@ -1,3 +1,17 @@
+"""Provides classes and functions for interacting with the 'animevost.org' site.
+
+This module exports the following classes:
+    Release
+    AnimevostRelease
+    Animevost
+    AnimevostSearchQuery
+    AnimevostPlaylist
+
+This module exports the following function:
+    get_recent_releases Return a list of the latest releases from the
+                        animevost site.
+"""
+
 import os
 import pickle
 import re

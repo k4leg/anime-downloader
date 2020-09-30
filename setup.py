@@ -7,7 +7,7 @@ with open('README.md') as f:
 
 setup(
     name='anime-downloader',
-    version='1',
+    version='2',
     url='https://github.com/k4leg/anime-downloader',
     author='k4leg',
     author_email='python.bogdan@gmail.com',

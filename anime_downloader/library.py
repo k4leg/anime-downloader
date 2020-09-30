@@ -1,3 +1,18 @@
+"""Core classes and functions.
+
+This module exports the following classes:
+    Playlist    Represent a playlist object.
+    Config      Represent a config object that parse a JSON file.
+
+This module exports the following functions:
+    get_db                          Return the DB.
+    print_db                        Print the DB.
+    get_updated_releases_from_db    Update all playlists in the DB.
+    get_site                        Receive the page and return it as
+                                    BeautifulSoup.
+    download                        Downloads a file.
+"""
+
 import json
 import os
 import pickle

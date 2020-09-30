@@ -1,3 +1,21 @@
+"""
+This module exports the following exceptions:
+    AnimevostParserException
+        SearchQueryLenError
+        NoEpisodeFoundError
+        SearchQueryDidNotReturnAnyResultsError
+        UserEnteredIncorrectDataError
+        NotExistsEpisodeError
+        NotALinkPassedError
+        ObjectNotFoundInDBError
+        NoUpdatedReleasesError
+        NoDBError
+        UndefinedBehaviorError
+        AnotherInstanceAlreadyRunError
+        NotEnoughArgumentsToInitializeError
+"""
+
+
 class AnimevostParserException(Exception):
     """"""  # FIXME
     error_message = ""
