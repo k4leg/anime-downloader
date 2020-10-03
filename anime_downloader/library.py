@@ -41,14 +41,13 @@ class Playlist:
         copy: bool = True
     ):
         self.playlist = links_to_episodes.copy() if copy else links_to_episodes
-        self._range = {*range(len(self.playlist)), None}
 
-    def index(self, value, start: int = 0, stop: int = 9223372036854775807, /):
+    def index(self, value, start=1, stop=9223372036854775807, /):
         """Return first index of value
 
         Raises ValueError if the value is not present.
         """
-        return self.playlist.index(value, start, stop)
+        return self.playlist.index(value, start - 1, stop) + 1
 
     def copy(self):
         """Return a shallow copy of the Playlist."""
@@ -64,20 +63,21 @@ class Playlist:
         return len(self.playlist)
 
     def __getitem__(self, key):
+        range_ = {*range(len(self.playlist)), None}
         if isinstance(key, slice):
             start, stop, step = key.start, key.stop, key.step
             if start is not None:
                 start -= 1
-            if (start not in self._range) or (stop not in self._range):
+            if (start not in range_) or (stop not in range_):
                 raise IndexError
-            if start is not None and stop is not None:
+            if (start is not None) and (stop is not None):
                 if start > stop:
                     raise IndexError
 
             return self.playlist[start:stop:step]
         elif isinstance(key, int):
             key -= 1
-            if key not in self._range:
+            if key not in range_:
                 raise IndexError
 
             return self.playlist[key]

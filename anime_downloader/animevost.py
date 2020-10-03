@@ -16,7 +16,8 @@ import os
 import pickle
 import re
 from abc import ABCMeta, abstractmethod
-from typing import Optional, List, Tuple
+from functools import total_ordering
+from typing import Optional, List, Tuple, Union
 
 import requests
 
@@ -261,7 +262,8 @@ class AnimevostSearchQuery:
         raise AttributeError(f"'{clsname}' object has no attribute '{key}'")
 
 
-class AnimevostPlaylist:
+@total_ordering
+class AnimevostPlaylist(library.Playlist):
     """Instance of this class contain an 'id' attribute that depends on the
     release.
 
@@ -272,20 +274,17 @@ class AnimevostPlaylist:
         copy                Return a shallow copy of the AnimevostPlaylist.
     """
 
-    def __init__(
-        self,
-        id: int,
-        /, *,
-        playlist: Optional[library.Playlist] = None,
-        copy: bool = True,
-    ):
+    def __init__(self, id: int, /, *, playlist: Union[list, tuple] = None):
         self.id = id
-        self.copy_flag = copy
         if playlist is None:
-            self.update()
+            library.Playlist.__init__(
+                self,
+                self._get_links_to_episodes(),
+                copy=False
+            )
         else:
-            self.playlist = playlist.copy() if self.copy_flag else playlist
-            self.is_modified_after_update = True
+            self.playlist = playlist
+        self.is_modified_after_update = True
 
     def download_episode(
         self,
@@ -300,8 +299,8 @@ class AnimevostPlaylist:
             if not os.path.exists(downloads):
                 os.mkdir(downloads)
 
-        link = self.playlist[episode]
-        episode = self.playlist.index(link) + 1
+        link = self[episode]
+        episode = self.index(link)
         library.download(
             os.path.join(downloads, f'{self.id}_{episode}.mp4'),
             link,
@@ -322,39 +321,37 @@ class AnimevostPlaylist:
             if not os.path.exists(downloads):
                 os.mkdir(downloads)
 
-        for link in self.playlist[episode_start:episode_stop]:
-            episode = self.playlist.index(link) + 1
+        for link in self[episode_start:episode_stop]:
+            episode = self.index(link)
             library.download(
                 os.path.join(downloads, f'{self.id}_{episode}.mp4'),
                 link,
-                text='Downloading episode {episode}'
+                text=f"Downloading episode {episode}"
             )
 
     def update(self):
         """Update the playlist."""
-        playlist = requests.post(
-            'https://api.animevost.org/v1/playlist', {'id': self.id}
-        ).json()
-        playlist = self._get_links_to_episodes(playlist)
-        playlist = library.Playlist(playlist)
-        if (hasattr(self, 'playlist') and (self.playlist != playlist)
-                or not hasattr(self, 'playlist')):
-            self.is_modified_after_update = True
-            self.playlist = playlist
-        else:
-            self.is_modified_after_update = False
+        playlist_before = self.playlist
+        library.Playlist.__init__(
+            self,
+            self._get_links_to_episodes(),
+            copy=False
+        )
+        self.is_modified_after_update = (True if self.playlist != playlist_before
+                                         else False)
 
     def copy(self):
         """Return a shallow copy of the AnimevostPlaylist."""
-        return AnimevostPlaylist(
-            self.id,
-            playlist=self.playlist,
-            copy=self.copy_flag
-        )
+        res = AnimevostPlaylist(self.id, playlist=self.playlist)
+        res.is_modified_after_update = self.is_modified_after_update
 
-    @staticmethod
-    def _get_links_to_episodes(links_to_episodes: List[dict], /) -> list:
+        return res
+
+    def _get_links_to_episodes(self) -> list:
         """Return a list of episodes links."""
+        links_to_episodes = requests.post(
+            'https://api.animevost.org/v1/playlist', {'id': self.id}
+        ).json()
         res = {}
         for i in links_to_episodes:
             episode = int(re.sub(r' серия', '', i['name']))
@@ -363,14 +360,11 @@ class AnimevostPlaylist:
 
         return [res[i] for i in sorted(res)]
 
+    def __lt__(self, other):
+        return self.id < other.id and self.playlist < other.playlist
+
     def __eq__(self, other):
-        if self.id == other.id and self.playlist == other.playlist:
-            return True
-
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+        return self.id == other.id and self.playlist == other.playlist
 
 
 def get_recent_releases() -> List[AnimevostRelease]:
