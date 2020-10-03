@@ -24,22 +24,7 @@ import requests
 from . import library
 from .exceptions import *
 
-PATH_TO_CONFIG_DIR = os.path.expanduser('~/.config/anime-downloader')
-try:
-    os.mkdir(PATH_TO_CONFIG_DIR)
-except FileExistsError:
-    pass
-
-PATH_TO_CONFIG = os.path.join(PATH_TO_CONFIG_DIR, 'config')
-try:
-    CONFIG = library.Config(os.path.expanduser(PATH_TO_CONFIG))
-except NotEnoughArgumentsToInitializeError:
-    CONFIG = library.Config(
-        PATH_TO_CONFIG,
-        path_to_db=os.path.join(PATH_TO_CONFIG_DIR, 'db'),
-        path_to_downloads=os.popen('xdg-user-dir DOWNLOAD').read().rstrip()
-    )
-
+DEFAULT_PATH_TO_DB = os.path.expanduser('~/.config/anime-downloader/db')
 ANIMEVOST_LINK = 'https://animevost.org'
 
 
@@ -111,7 +96,7 @@ class Animevost:
         if tmp_playlist != self.playlist:
             self.release.update_title()
 
-    def save_to_db(self, path_to_db: str = CONFIG.path_to_db, /):
+    def save_to_db(self, path_to_db: str = DEFAULT_PATH_TO_DB, /):
         """Save to the DB (and creates it if didn't exist) instance object."""
         try:
             with open(path_to_db, 'rb') as f:
@@ -130,7 +115,7 @@ class Animevost:
             with open(path_to_db, 'xb') as f:
                 pickle.dump([self], f)
 
-    def delete_from_db(self, path_to_db: str = CONFIG.path_to_db, /):
+    def delete_from_db(self, path_to_db: str = DEFAULT_PATH_TO_DB, /):
         """Remove an instance object from the DB.
 
         Raises ObjectNotFoundInDBError if instance isn't in the DB.

@@ -9,6 +9,22 @@ from anime_downloader import animevost
 from anime_downloader import library
 from anime_downloader.exceptions import *
 
+PATH_TO_CONFIG_DIR = os.path.expanduser('~/.config/anime-downloader')
+try:
+    os.mkdir(PATH_TO_CONFIG_DIR)
+except FileExistsError:
+    pass
+
+PATH_TO_CONFIG = os.path.join(PATH_TO_CONFIG_DIR, 'config')
+try:
+    CONFIG = library.Config(os.path.expanduser(PATH_TO_CONFIG))
+except NotEnoughArgumentsToInitializeError:
+    CONFIG = library.Config(
+        PATH_TO_CONFIG,
+        path_to_db=os.path.join(PATH_TO_CONFIG_DIR, 'db'),
+        path_to_downloads=os.popen('xdg-user-dir DOWNLOAD').read().rstrip()
+    )
+
 
 @click.command()
 @click.option(
@@ -24,7 +40,7 @@ from anime_downloader.exceptions import *
 @click.option(
     '-db', '--path-to-db',
     type=str,
-    default=animevost.CONFIG.path_to_db,
+    default=CONFIG.path_to_db,
     help='configure the path to the DB'
 )
 @click.option(
@@ -50,7 +66,7 @@ from anime_downloader.exceptions import *
 @click.option(
     '-downloads', '--path-to-downloads',
     type=str,
-    default=animevost.CONFIG.path_to_downloads,
+    default=CONFIG.path_to_downloads,
     help='configure the path to downloads'
 )
 @click.option(
@@ -76,12 +92,12 @@ def main(
     save: bool
 ):
     path_to_db = os.path.expanduser(path_to_db)
-    if save and path_to_db != animevost.CONFIG.path_to_db:
-        animevost.CONFIG.path_to_db = path_to_db
-    if save and path_to_downloads != animevost.CONFIG.path_to_downloads:
-        animevost.CONFIG.path_to_downloads = path_to_downloads
+    if save and path_to_db != CONFIG.path_to_db:
+        CONFIG.path_to_db = path_to_db
+    if save and path_to_downloads != CONFIG.path_to_downloads:
+        CONFIG.path_to_downloads = path_to_downloads
     if save:
-        animevost.CONFIG.save()
+        CONFIG.save()
 
     if add:
         search_query = input("Enter your search query: ")
@@ -148,15 +164,15 @@ def main(
 
 try:
     USER = os.getenv('USER')
-    LOCK_FILE = f'/tmp/anime-downloader.{USER}.lock'
-    if os.path.exists(LOCK_FILE):
+    PATH_TO_LOCK_FILE = f'/tmp/anime-downloader.{USER}.lock'
+    if os.path.exists(PATH_TO_LOCK_FILE):
         raise AnotherInstanceAlreadyRunError
 
-    open(LOCK_FILE, 'x').close()
+    open(PATH_TO_LOCK_FILE, 'x').close()
     main()
 finally:
     try:
-        os.remove(LOCK_FILE)
+        os.remove(PATH_TO_LOCK_FILE)
     except FileNotFoundError:
-        print(f"WARNING: the {LOCK_FILE} file was deleted during script"
+        print(f"WARNING: the {PATH_TO_LOCK_FILE} file was deleted during script"
               + " execution, so something might have gone wrong.")
