@@ -1,6 +1,6 @@
 """
 This module exports the following exceptions:
-    AnimevostParserException
+    AnimeException
         SearchQueryLenError
         NoEpisodeFoundError
         SearchQueryDidNotReturnAnyResultsError
@@ -16,7 +16,7 @@ This module exports the following exceptions:
 """
 
 
-class AnimevostParserException(Exception):
+class AnimeException(Exception):
     error_message = ""
 
     def __str__(self):
@@ -28,49 +28,49 @@ class AnimevostParserException(Exception):
         return self.error_message
 
 
-class SearchQueryLenError(AnimevostParserException):
+class SearchQueryLenError(AnimeException):
     error_message = "request length must be greater than 3"
 
 
-class NoEpisodeFoundError(AnimevostParserException):
+class NoEpisodeFoundError(AnimeException):
     pass
 
 
-class SearchQueryDidNotReturnAnyResultsError(AnimevostParserException):
+class SearchQueryDidNotReturnAnyResultsError(AnimeException):
     pass
 
 
-class UserEnteredIncorrectDataError(AnimevostParserException):
+class UserEnteredIncorrectDataError(AnimeException):
     pass
 
 
-class NotExistsEpisodeError(AnimevostParserException):
+class NotExistsEpisodeError(AnimeException):
     pass
 
 
-class NotALinkPassedError(AnimevostParserException):
+class NotALinkPassedError(AnimeException):
     pass
 
 
-class ObjectNotFoundInDBError(AnimevostParserException):
+class ObjectNotFoundInDBError(AnimeException):
     pass
 
 
-class NoUpdatedReleasesError(AnimevostParserException):
+class NoUpdatedReleasesError(AnimeException):
     pass
 
 
-class NoDBError(AnimevostParserException):
+class NoDBError(AnimeException):
     pass
 
 
-class UndefinedBehaviorError(AnimevostParserException):
+class UndefinedBehaviorError(AnimeException):
     pass
 
 
-class AnotherInstanceAlreadyRunError(AnimevostParserException):
+class AnotherInstanceAlreadyRunError(AnimeException):
     pass
 
 
-class NotEnoughArgumentsToInitializeError(AnimevostParserException):
+class NotEnoughArgumentsToInitializeError(AnimeException):
     pass

@@ -5,16 +5,15 @@ import os
 
 import click
 
-from anime_downloader import animevost
 from anime_downloader import library
 from anime_downloader.exceptions import *
+from anime_downloader.sites import animevost
 
 PATH_TO_CONFIG_DIR = os.path.expanduser('~/.config/anime-downloader')
 try:
     os.mkdir(PATH_TO_CONFIG_DIR)
 except FileExistsError:
     pass
-
 PATH_TO_CONFIG = os.path.join(PATH_TO_CONFIG_DIR, 'config')
 try:
     CONFIG = library.Config(os.path.expanduser(PATH_TO_CONFIG))
@@ -22,63 +21,47 @@ except NotEnoughArgumentsToInitializeError:
     CONFIG = library.Config(
         PATH_TO_CONFIG,
         path_to_db=os.path.join(PATH_TO_CONFIG_DIR, 'db'),
-        path_to_downloads=os.popen('xdg-user-dir DOWNLOAD').read().rstrip()
+        path_to_downloads=os.popen('xdg-user-dir DOWNLOAD').read().rstrip(),
     )
 
 
 @click.command()
+@click.option("-a", "--add", is_flag=True, help="add a release to the DB")
+@click.option("-r", "--remove", is_flag=True, help="remove release from DB")
 @click.option(
-    '-a', '--add',
-    is_flag=True,
-    help='add a release to the DB'
-)
-@click.option(
-    '-r', '--remove',
-    is_flag=True,
-    help='remove release from DB'
-)
-@click.option(
-    '-db', '--path-to-db',
+    "-db",
+    "--path-to-db",
     type=str,
     default=CONFIG.path_to_db,
-    help='configure the path to the DB'
+    help="configure the path to the DB",
 )
+@click.option("-lsdb", "--list-db", is_flag=True, help="print db")
 @click.option(
-    '-lsdb', '--list-db',
+    "-lsrr",
+    "--list-recent-releases",
     is_flag=True,
-    help='print db'
+    help="print a list of recent releases (oldest to most recent)",
 )
+@click.option("-d", "--download", is_flag=True, help="download episode(s)")
 @click.option(
-    '-lsrr', '--list-recent-releases',
+    "-da",
+    "--download-auto",
     is_flag=True,
-    help='print a list of recent releases (oldest to most recent)'
+    help="download the latest episodes of releases that have added episodes",
 )
 @click.option(
-    '-d', '--download',
-    is_flag=True,
-    help='download episode(s)'
-)
-@click.option(
-    '-da', '--download-auto',
-    is_flag=True,
-    help='download the latest episodes of releases that have added episodes'
-)
-@click.option(
-    '-downloads', '--path-to-downloads',
+    "-downloads",
+    "--path-to-downloads",
     type=str,
     default=CONFIG.path_to_downloads,
-    help='configure the path to downloads'
+    help="configure the path to downloads",
 )
 @click.option(
-    '--mkdir/--no-mkdir',
+    "--mkdir/--no-mkdir",
     default=None,
-    help='enable/disable the flag of creating folders before upload'
+    help="enable/disable the flag of creating folders before upload",
 )
-@click.option(
-    '--save',
-    is_flag=True,
-    help='save settings'
-)
+@click.option("--save", is_flag=True, help="save settings")
 def main(
     add: bool,
     remove: bool,
@@ -89,8 +72,8 @@ def main(
     download_auto: bool,
     path_to_downloads: str,
     mkdir: bool,
-    save: bool
-):
+    save: bool,
+) -> None:
     path_to_db = os.path.expanduser(path_to_db)
     if save and path_to_db != CONFIG.path_to_db:
         CONFIG.path_to_db = path_to_db
@@ -101,7 +84,7 @@ def main(
 
     if add:
         search_query = input("Enter your search query: ")
-        animevost.Animevost(search_query).save_to_db(path_to_db)
+        animevost.Anime(search_query).save_to_db(path_to_db)
     elif remove:
         library.print_db(path_to_db)
 
@@ -123,7 +106,7 @@ def main(
             episode = int(episode) if episode else None
             if mkdir is None:
                 mkdir = False
-            release_playlist.download_episode(episode, path_to_downloads, mkdir)
+            release_playlist.download_episode(episode, path_to_downloads, mkdir=mkdir)
         except ValueError:
             episode_start, episode_stop = [i for i in episode.split(':')]
             episode_start = int(episode_start) if episode_start else None
@@ -131,21 +114,16 @@ def main(
             if mkdir is None:
                 mkdir = True
             release_playlist.download_episodes(
-                episode_start,
-                episode_stop,
-                path_to_downloads,
-                mkdir
+                episode_start, episode_stop, path_to_downloads, mkdir=mkdir
             )
-
     elif download_auto:
         library.update_and_save_all_db(path_to_db)
         try:
-            updated_releases = library.get_updated_releases_from_db(path_to_db)
+            updated_releases = library.get_updated_anime_from_db(path_to_db)
         except NoUpdatedReleasesError:
             print("Nothing to do.")
             import sys
             sys.exit()
-
         for animevost_instance in updated_releases:
             release = animevost_instance.release
             title = release.title
@@ -164,15 +142,16 @@ def main(
 
 try:
     USER = os.getenv('USER')
-    PATH_TO_LOCK_FILE = f'/tmp/anime-downloader.{USER}.lock'
-    if os.path.exists(PATH_TO_LOCK_FILE):
+    path_to_lock_file = f'/tmp/anime-downloader.{USER}.lock'
+    if os.path.exists(path_to_lock_file):
         raise AnotherInstanceAlreadyRunError
-
-    open(PATH_TO_LOCK_FILE, 'x').close()
+    open(path_to_lock_file, 'x').close()
     main()
 finally:
     try:
-        os.remove(PATH_TO_LOCK_FILE)
+        os.remove(path_to_lock_file)
     except FileNotFoundError:
-        print(f"WARNING: the {PATH_TO_LOCK_FILE} file was deleted during script"
-              + " execution, so something might have gone wrong.")
+        print(
+            f"WARNING: the {path_to_lock_file} file was deleted during script execution"
+            + ", so something might have gone wrong."
+        )
