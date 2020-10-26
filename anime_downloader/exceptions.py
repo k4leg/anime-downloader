@@ -13,6 +13,7 @@ This module exports the following exceptions:
         UndefinedBehaviorError
         AnotherInstanceAlreadyRunError
         NotEnoughArgumentsToInitializeError
+        LinkHasNoIDError
 """
 
 
@@ -20,12 +21,7 @@ class AnimeException(Exception):
     error_message = ""
 
     def __str__(self):
-        if self.args and not self.error_message:
-            return ' '.join(self.args)
-        elif self.args:
-            return self.error_message + f" ({' '.join(self.args)})"
-
-        return self.error_message
+        return f"{self.error_message} ({', '.join(self.args)})"
 
 
 class SearchQueryLenError(AnimeException):
@@ -73,4 +69,8 @@ class AnotherInstanceAlreadyRunError(AnimeException):
 
 
 class NotEnoughArgumentsToInitializeError(AnimeException):
+    pass
+
+
+class LinkHasNoIDError(AnimeException):
     pass

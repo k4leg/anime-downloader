@@ -1,23 +1,40 @@
 """Core classes and functions.
 
 This module exports the following classes:
-    Playlist  Represent a playlist object.
-    Config    Represent a config object that parse a JSON file.
+    Anime        Instance of this class contains the `title`, `link` and
+                 `playlist` attributes.
+    Config       Represent a config object that parse a JSON file.
+    Playlist     Represent a playlist object.
+    SearchQuery  Represent a search query object.
 
 This module exports the following functions:
-    get_db                        Return the DB.
-    print_db                      Print the DB.
-    get_updated_releases_from_db  Update all playlists in the DB.
-    get_page                      Return a page.
     download                      Downloads a file.
+    get_db                        Return the DB.
+    get_page                      Return a page.
+    get_updated_releases_from_db  Return a list of updated releases.
+    print_db                      Print the DB.
+    update_and_save_all_db        Update all playlists in the DB.
 """
+
+__all__ = [
+    'Anime',
+    'Config',
+    'Playlist',
+    'SearchQuery',
+    'download',
+    'get_db',
+    'get_page',
+    'get_updated_anime_from_db',
+    'print_db',
+    'update_and_save_all_db',
+]
 
 import json
 import os
 import pickle
 from abc import ABCMeta, abstractmethod
 from functools import total_ordering
-from typing import List, Optional, Union
+from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 
 import requests
 from bs4 import BeautifulSoup
@@ -26,66 +43,89 @@ from rich.progress import Progress
 from anime_downloader.exceptions import *
 
 URL = str
+DEFAULT_PATH_TO_DB = os.path.expanduser('~/.config/anime-downloader/db')
 
 
-@total_ordering
-class Playlist:
-    """Represent a playlist object.
+class Anime(metaclass=ABCMeta):
+    """
+    Instance of this class contains the `title`, `link` and `playlist`
+    attributes.
 
-    Instance of this class contain the playlist attribute that contains a list of
-    links.
+    This class exports the following methods:
+        update_playlist  Update the playlist.
+        save_to_db       Save an instance to the DB.
+        remove_from_db   Remove an instance from the DB.
     """
 
-    def __init__(self, links_to_episodes: List[URL], *, copy: bool = True) -> None:
-        self.playlist = links_to_episodes.copy() if copy else links_to_episodes
+    def __init__(self, link: URL, title: Optional[str] = None) -> None:
+        self.link = link
+        self.title = self._get_title() if title is None else title
+        self.update_playlist()
 
-    def index(self, value: URL, start: int = 1, stop: int = 9223372036854775807) -> int:
-        """Return first index of value.
+    def save_to_db(self, path_to_db: str = DEFAULT_PATH_TO_DB) -> None:
+        """Save an instance to the DB (and creates it if didn't exist)."""
+        try:
+            with open(path_to_db, 'rb') as f:
+                db: list = pickle.load(f)
 
-        Raises ValueError if the value is not present.
+            try:
+                index = db.index(self)
+                db.remove(self)
+                db.insert(index, self)
+            except ValueError:
+                db.append(self)
+
+            with open(path_to_db, 'wb') as f:
+                pickle.dump(db, f)
+        except FileNotFoundError:
+            with open(path_to_db, 'xb') as f:
+                pickle.dump([self], f)
+
+    def remove_from_db(self, path_to_db: str = DEFAULT_PATH_TO_DB) -> None:
+        """Remove an instance from the DB.
+
+        Raises `ObjectNotFoundInDBError` if instance isn't in the DB.
         """
-        return self.playlist.index(value, start - 1, stop) + 1
+        with open(path_to_db, 'rb') as f:
+            db: List[Anime] = pickle.load(f)
 
-    def copy(self) -> 'Playlist':
-        """Return a shallow copy of the Playlist."""
-        return Playlist(self.playlist)
+        try:
+            db.remove(self)
+        except ValueError:
+            raise ObjectNotFoundInDBError(self) from None
 
-    def __lt__(self, other: 'Playlist') -> bool:
-        return self.playlist < other.playlist
+        with open(path_to_db, 'wb') as f:
+            pickle.dump(db, f)
 
-    def __eq__(self, other: 'Playlist') -> bool:
-        return self.playlist == other.playlist
-    
-    def __len__(self) -> int:
-        return len(self.playlist)
+    @abstractmethod
+    def update_playlist(self) -> None:
+        """Update the `self.playlist`."""
 
-    def __getitem__(self, key: Union[int, slice]) -> Union[URL, List[URL]]:
-        range_ = {*range(len(self.playlist)), None}
-        
-        if isinstance(key, slice):
-            start, stop, step = key.start, key.stop, key.step
-            if start is not None:
-                start -= 1
-            if start not in range_ or stop not in range_:
-                raise IndexError
-            if start is not None and stop is not None:
-                if start > stop:
-                    raise IndexError
-            return self.playlist[start:stop:step]
-        elif isinstance(key, int):
-            key -= 1
-            if key not in range_:
-                raise IndexError
-            return self.playlist[key]
-        elif key is None:
-            return self.playlist[-1]
-        raise TypeError
+    @abstractmethod
+    def _get_title(self) -> str:
+        """Return the title."""
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}('{self.link}')"
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Anime):
+            return NotImplemented
+        return ((self.link, self.title, self.playlist)
+                == (other.link, other.title, other.playlist))
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class Config:
     """Represent a config object that parse a JSON file.
 
     The attributes of instance of this class represent the JSON file itself.
+
+    This class exports the following method:
+        save  Save config using instance attributes.
     """
 
     def __init__(self, path_to_config: str, **kwargs) -> None:
@@ -111,11 +151,11 @@ class Config:
     def _dump_config(self, **kwargs) -> None:
         """Save the config by accepting arguments.
 
-        Raises TypeError if an empty kwargs is passed.
+        Raises `TypeError` if an empty kwargs is passed.
         """
         if not kwargs:
             raise TypeError("kwargs argument must not be empty")
-        
+
         with open(self._path, 'w') as f:
             json.dump(kwargs, f)
 
@@ -125,36 +165,186 @@ class Config:
             cfg = json.load(f)
         self._set_dict_as_attrs(cfg)
 
-    def _set_dict_as_attrs(self, d: dict, /) -> None:  # FIXME: rename 'd'
-        """Concatenate self.__dict__ and d, replacing objects from d if any."""
-        for key, value in d.items():
+    def _set_dict_as_attrs(self, attrs: dict, /) -> None:
+        """
+        Concatenate `self.__dict__` and `attrs`, replacing objects from `attrs` if any.
+        """
+        for key, value in attrs.items():
             setattr(self, key, value)
 
 
-class Release(metaclass=ABCMeta):
+@total_ordering
+class Playlist:
+    """Represent a playlist object.
+
+    Instance of this class contain the `playlist` attribute that contains a tuple
+    of links.
+
+    This class exports the following methods:
+        download           Download the episode.
+        download_episodes  Download the episodes.
+        index              Return first index of value.
     """
-    Instance of this class contain the attributes of the link to the release and
-    the title of the release.  The release name can be taken from the link by
-    implementing the _get_title method and if the release name has been passed
-    then unnecessary actions for calling the _get_title method are not done.
+
+    def __init__(self, links: Iterable[URL], /) -> None:
+        self.playlist = tuple(links)
+
+    def download(
+        self,
+        episode: Optional[int] = None,
+        downloads: str = '~/Downloads',
+    ) -> None:
+        """Download the episode."""
+        downloads = os.path.expanduser(downloads)
+
+        link = self[episode]
+        episode = self.index(link)
+        download(link, dir=downloads, text=f"Downloading episode {episode}")
+
+    def download_episodes(
+        self,
+        episode_start: Optional[int] = None,
+        episode_stop: Optional[int] = None,
+        downloads: str = '~/Downloads',
+    ) -> None:
+        """Download the episodes."""
+        downloads = os.path.expanduser(downloads)
+
+        for link in self[episode_start:episode_stop]:
+            episode = self.index(link)
+            download(link, dir=downloads, text=f"Downloading episode {episode}")
+
+    def index(
+        self,
+        value: Union[URL, Tuple[URL, ...]],
+        start: int = 1,
+        stop: int = 9223372036854775807,
+    ) -> int:
+        """Return first index of value.
+
+        Raises `ValueError` if the value is not present.
+        """
+        return self.playlist.index(value, start - 1, stop) + 1
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, Playlist):
+            return NotImplemented
+        return self.playlist < other.playlist
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Playlist):
+            return NotImplemented
+        return self.playlist == other.playlist
+
+    def __len__(self) -> int:
+        return len(self.playlist)
+
+    def __getitem__(self, key: Union[int, slice, None]) -> Union[URL, Tuple[URL, ...]]:
+        """
+        The index starts at 1 and ends at `len(self)` inclusive.  If `None` was
+        passed then the last element is returned.  When slicing, you can only
+        specify indices that exist (that is, from 1 to `len(self)`) or `None`.
+
+        Raises a `TypeError` on an unsupported type.
+        """
+        range_ = {*range(len(self.playlist)), None}
+
+        if isinstance(key, slice):
+            start, stop, step = key.start, key.stop, key.step
+            if start is not None:
+                start -= 1
+            if start not in range_ or stop not in range_:
+                raise IndexError
+            if start is not None and stop is not None:
+                if start > stop:
+                    raise IndexError
+            return self.playlist[start:stop:step]
+        elif isinstance(key, int):
+            key -= 1
+            if key not in range_:
+                raise IndexError
+            return self.playlist[key]
+        elif key is None:
+            return self.playlist[-1]
+        raise TypeError
+
+
+class SearchQuery:
+    """Represent a search query object.
+
+    Instance of this class contain a `releases` attribute.  This type object is
+    immutable.
     """
 
-    def __init__(self, link: URL, title: Optional[str] = None) -> None:
-        self.link = link
-        self.update_title(title)
+    def __init__(self, search_query_text: str, /, *, format: bool = True) -> None:
+        object.__setattr__(self, '_search_query_text', search_query_text)
+        object.__setattr__(self, '_format', format)
+        object.__setattr__(self, 'releases', self._get_search_query_results())
 
-    def update_title(self, title: Optional[str] = None) -> None:
-        """Update the release name."""
-        self.title = self._get_title(self.link) if title is None else title
-
-    @staticmethod
     @abstractmethod
-    def _get_title(link: str) -> str:
-        """Return the name of the release."""
+    def _get_search_query_results(self) -> Tuple[Anime, ...]:
+        """Return a tuple of releases.
 
-    def __str__(self) -> str:
-        clsname = self.__class__.__name__
-        return f"{clsname}('{self.title}', '{self.link}')"
+        Raises `SearchQueryDidNotReturnAnyResultsError` if search query return an
+        empty release list.
+        """
+
+    def __bool__(self) -> bool:
+        return bool(self.releases)
+
+    def __setattr__(self, key, value) -> NoReturn:
+        class_name = self.__class__.__name__
+        if key in dir(self):
+            raise AttributeError(
+                f"'{class_name}' object attribute '{key}' is read-only"
+            )
+        raise AttributeError(f"'{class_name}' object has no attribute '{key}'")
+
+    def __len__(self) -> int:
+        return len(self.releases)
+
+    def __getitem__(self, key: Union[int, slice]) -> Union[Anime, Tuple[Anime, ...]]:
+        return self.releases[key]
+
+    def __setitem__(self, key, value) -> NoReturn:
+        class_name = self.__class__.__name__
+        raise TypeError(f"'{class_name}' object does not support item assignment")
+
+    def __iter__(self) -> Iterable[Anime]:
+        return iter(self.releases)
+
+
+def download(
+        link: URL,
+        filename: Optional[str] = None,
+        dir: str = '.',
+        *,
+        download_bar: bool = True,
+        text: str = 'Downloading...',
+        text_end: str = '\n',
+) -> None:
+    """Downloads a file.
+
+    Prints the text to the progress bar or prints the text if it is disabled or
+    information about the size of the downloaded file was not received.
+    """
+    if filename is None:
+        filename = os.path.basename(link)
+
+    response = requests.get(link, stream=True)
+    size = response.headers.get('Content-Length')
+    if size is None or not download_bar:
+        print(text, end=text_end)
+        with open(os.path.join(dir, filename), 'xb') as f:
+            f.write(response.content)
+    else:
+        size = int(size)
+        with Progress(transient=True) as progress:
+            task = progress.add_task(text, total=100)
+            with open(os.path.join(dir, filename), 'xb') as f:
+                for data in response.iter_content(chunk_size=size // 100):
+                    f.write(data)
+                    progress.update(task, advance=1)
 
 
 def get_db(path_to_db: str) -> list:
@@ -162,6 +352,24 @@ def get_db(path_to_db: str) -> list:
     with open(path_to_db, 'rb') as f:
         db = pickle.load(f)
     return db
+
+
+def get_page(link: URL, params: Optional[dict] = None) -> BeautifulSoup:
+    """Return a page."""
+    site = requests.get(link, params)
+    return BeautifulSoup(site.text, 'html.parser')
+
+
+def get_updated_anime_from_db(path_to_db: str) -> list:
+    """Return a list of updated releases.
+
+    Raises `NoUpdatedReleasesError` if the list is empty.
+    """
+    db = get_db(path_to_db)
+    res = [anime for anime in db if anime.is_modified_after_update]
+    if not res:
+        raise NoUpdatedReleasesError
+    return res
 
 
 def print_db(path_to_db: str) -> None:
@@ -175,10 +383,8 @@ def print_db(path_to_db: str) -> None:
         print("No DB created.")
     else:
         if db:
-            for n, animevost_instance in enumerate(db, 1):
-                release = animevost_instance.release
-                title = release.title
-                link = release.link
+            for n, anime in enumerate(db, 1):
+                title, link = anime.title, anime.link
                 print(f"{n}. {title} ({link})")
         else:
             print("There is nothing in the DB.")
@@ -187,53 +393,6 @@ def print_db(path_to_db: str) -> None:
 def update_and_save_all_db(path_to_db: str) -> None:
     """Update all playlists in the DB."""
     db = get_db(path_to_db)
-    for animevost_instance in db:
-        animevost_instance.update()
-        animevost_instance.save_to_db(path_to_db)
-
-
-def get_updated_anime_from_db(path_to_db: str) -> list:
-    """Return a list of updated releases.
-
-    Raises NoUpdatedReleasesError if the list is empty.
-    """
-    db = get_db(path_to_db)
-    res = [animevost for animevost in db if animevost.playlist.is_modified_after_update]
-    if not res:
-        raise NoUpdatedReleasesError
-    return res
-
-
-def get_page(link: URL, params: Optional[dict] = None) -> BeautifulSoup:
-    """Return a page."""
-    site = requests.get(link, params)
-    return BeautifulSoup(site.text, 'html.parser')
-
-
-def download(
-    filename: str,
-    link: URL,
-    *,
-    download_bar: bool = True,
-    text: str = 'Downloading...',
-    text_end: str = '\n',
-) -> None:
-    """Downloads a file.
-
-    Prints the text to the progress bar or prints the text if it is disabled or
-    information about the size of the downloaded file was not received.
-    """
-    response = requests.get(link, stream=True)
-    size = response.headers.get('Content-Length')
-    if size is None or not download_bar:
-        print(text, end=text_end)
-        with open(filename, 'xb') as f:
-            f.write(response.content)
-    else:
-        size = int(size)
-        with Progress(transient=True) as progress:
-            task = progress.add_task(text, total=100)
-            with open(filename, 'xb') as f:
-                for data in response.iter_content(chunk_size=size // 100):
-                    f.write(data)
-                    progress.update(task, advance=1)
+    for anime in db:
+        anime.update_playlist()
+        anime.save_to_db(path_to_db)

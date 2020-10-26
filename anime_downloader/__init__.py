@@ -5,7 +5,7 @@ This package exports the following modules:
     library     Core classes and functions.
 
 This package exports the following package:
-    sites   Anime sites.
+    sites  Anime sites.
 """
 
-from . import exceptions, library, sites
+from anime_downloader import exceptions, library, sites

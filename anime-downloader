@@ -1,13 +1,17 @@
 #!/usr/bin/env python
-"""The command interface for the anime_downloader module."""
+"""The command interface for the `anime_downloader` module."""
 
 import os
+from types import ModuleType
 
 import click
 
 from anime_downloader import library
 from anime_downloader.exceptions import *
-from anime_downloader.sites import animevost
+from anime_downloader.sites import sites
+
+USER = os.getenv('USER')
+PATH_TO_LOCK_FILE = f'/tmp/anime-downloader.{USER}.lock'
 
 PATH_TO_CONFIG_DIR = os.path.expanduser('~/.config/anime-downloader')
 try:
@@ -22,136 +26,179 @@ except NotEnoughArgumentsToInitializeError:
         PATH_TO_CONFIG,
         path_to_db=os.path.join(PATH_TO_CONFIG_DIR, 'db'),
         path_to_downloads=os.popen('xdg-user-dir DOWNLOAD').read().rstrip(),
+        site='animevost',
     )
+
+
+def create_lock_file() -> None:
+    if os.path.exists(PATH_TO_LOCK_FILE):
+        raise AnotherInstanceAlreadyRunError
+    open(PATH_TO_LOCK_FILE, 'x').close()
+
+
+def remove_lock_file() -> None:
+    os.remove(PATH_TO_LOCK_FILE)
+
+
+def add_anime(site: ModuleType, path_to_db: str) -> None:
+    search_query = site.SearchQuery(input("Enter your search query: "))
+    for n, anime in enumerate(search_query, 1):
+        title, link = anime.title, anime.link
+        print(f"{n}. {title} ({link})")
+
+    user_choice = int(input("Enter the number of anime: ")) - 1
+    search_query[user_choice].save_to_db(path_to_db)
+
+
+def remove_anime(path_to_db: str) -> None:
+    library.print_db(path_to_db)
+
+    anime_index_for_delete = int(
+        input("Enter the release number you want to remove: ")
+    ) - 1
+    db = library.get_db(path_to_db)
+    db[anime_index_for_delete].remove_from_db(path_to_db)
+
+
+def download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
+    library.print_db(path_to_db)
+
+    anime_index = int(
+        input("Enter the release number for which you want to download the"
+              + " episode(s): ")
+    ) - 1
+    anime = library.get_db(path_to_db)[anime_index]
+    episode = input("Enter the episode(s) you want to download: ")
+    try:
+        episode = int(episode) if episode else None
+        anime.playlist.download(episode, path_to_downloads)
+    except ValueError:
+        episode_start, episode_stop = [i for i in episode.split(':')]
+        episode_start = int(episode_start) if episode_start else None
+        episode_stop = int(episode_stop) if episode_stop else None
+        anime.playlist.download_anime_episodes(
+            episode_start, episode_stop, path_to_downloads
+        )
+
+
+def auto_download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
+    library.update_and_save_all_db(path_to_db)
+    try:
+        updated_anime = library.get_updated_anime_from_db(path_to_db)
+    except NoUpdatedReleasesError:
+        print("Nothing to do.")
+        import sys
+        sys.exit()
+    for anime in updated_anime:
+        title = anime.title
+        print(f"Downloading the episode of the '{title}' release...")
+        anime.playlist.download(downloads=path_to_downloads)
+
+
+def print_recent_anime(site: ModuleType) -> None:
+    try:
+        recent_anime = site.get_recent_anime()
+    except AttributeError:
+        print("This site doesn't support this argument.")
+    else:
+        recent_anime.reverse()
+        for n, anime in zip(range(len(recent_anime), 0, -1), recent_anime):
+            title, link = anime.title, anime.link
+            print(f"{n}. {title} ({link})")
+
+
+def print_anime_sites() -> None:
+    for n, site in enumerate(sites, 1):
+        print(f"{n}. {site}")
 
 
 @click.command()
 @click.option("-a", "--add", is_flag=True, help="add a release to the DB")
 @click.option("-r", "--remove", is_flag=True, help="remove release from DB")
-@click.option(
-    "-db",
-    "--path-to-db",
-    type=str,
-    default=CONFIG.path_to_db,
-    help="configure the path to the DB",
-)
-@click.option("-lsdb", "--list-db", is_flag=True, help="print db")
-@click.option(
-    "-lsrr",
-    "--list-recent-releases",
-    is_flag=True,
-    help="print a list of recent releases (oldest to most recent)",
-)
 @click.option("-d", "--download", is_flag=True, help="download episode(s)")
 @click.option(
-    "-da",
-    "--download-auto",
+    "-ad",
+    "--auto-download",
     is_flag=True,
     help="download the latest episodes of releases that have added episodes",
 )
 @click.option(
-    "-downloads",
     "--path-to-downloads",
     type=str,
     default=CONFIG.path_to_downloads,
     help="configure the path to downloads",
 )
+@click.option("-lsdb", "--list-db", is_flag=True, help="print db")
 @click.option(
-    "--mkdir/--no-mkdir",
-    default=None,
-    help="enable/disable the flag of creating folders before upload",
+    "--path-to-db",
+    type=str,
+    default=CONFIG.path_to_db,
+    help="configure the path to the DB",
+)
+@click.option(
+    "-lsrr",
+    "--list-recent-anime",
+    is_flag=True,
+    help="print a list of recent anime (oldest to most recent)",
+)
+@click.option("--print-sites", is_flag=True, help="print sites")
+@click.option(
+    "--site",
+    type=str,
+    default=CONFIG.site,
+    help="configure the site to download",
 )
 @click.option("--save", is_flag=True, help="save settings")
 def main(
     add: bool,
     remove: bool,
-    path_to_db: str,
-    list_db: bool,
-    list_recent_releases: bool,
     download: bool,
-    download_auto: bool,
+    auto_download: bool,
     path_to_downloads: str,
-    mkdir: bool,
+    list_db: bool,
+    path_to_db: str,
+    list_recent_anime: bool,
+    print_sites: bool,
+    site: str,
     save: bool,
 ) -> None:
-    path_to_db = os.path.expanduser(path_to_db)
-    if save and path_to_db != CONFIG.path_to_db:
-        CONFIG.path_to_db = path_to_db
-    if save and path_to_downloads != CONFIG.path_to_downloads:
-        CONFIG.path_to_downloads = path_to_downloads
-    if save:
-        CONFIG.save()
+    create_lock_file()
 
-    if add:
-        search_query = input("Enter your search query: ")
-        animevost.Anime(search_query).save_to_db(path_to_db)
-    elif remove:
-        library.print_db(path_to_db)
-
-        release_index_for_delete = int(
-            input("Enter the release number you want to remove: ")
-        ) - 1
-        db = library.get_db(path_to_db)
-        db[release_index_for_delete].delete_from_db(path_to_db)
-    elif download:
-        library.print_db(path_to_db)
-
-        release_index = int(
-            input("Enter the release number for which you want to download the"
-                  + " episode(s): ")
-        ) - 1
-        release_playlist = library.get_db(path_to_db)[release_index].playlist
-        episode = input("Enter the episode(s) you want to download: ")
-        try:
-            episode = int(episode) if episode else None
-            if mkdir is None:
-                mkdir = False
-            release_playlist.download_episode(episode, path_to_downloads, mkdir=mkdir)
-        except ValueError:
-            episode_start, episode_stop = [i for i in episode.split(':')]
-            episode_start = int(episode_start) if episode_start else None
-            episode_stop = int(episode_stop) if episode_stop else None
-            if mkdir is None:
-                mkdir = True
-            release_playlist.download_episodes(
-                episode_start, episode_stop, path_to_downloads, mkdir=mkdir
-            )
-    elif download_auto:
-        library.update_and_save_all_db(path_to_db)
-        try:
-            updated_releases = library.get_updated_anime_from_db(path_to_db)
-        except NoUpdatedReleasesError:
-            print("Nothing to do.")
-            import sys
-            sys.exit()
-        for animevost_instance in updated_releases:
-            release = animevost_instance.release
-            title = release.title
-            print(f"Downloading the episode of the '{title}' release...")
-            animevost_instance.playlist.download_episode()
-    elif list_db:
-        library.print_db(path_to_db)
-    elif list_recent_releases:
-        recent_releases = animevost.get_recent_releases()
-        recent_releases.reverse()
-        for release in recent_releases:
-            title = release.title
-            link = release.link
-            print(f"{title} ({link})")
-
-
-try:
-    USER = os.getenv('USER')
-    path_to_lock_file = f'/tmp/anime-downloader.{USER}.lock'
-    if os.path.exists(path_to_lock_file):
-        raise AnotherInstanceAlreadyRunError
-    open(path_to_lock_file, 'x').close()
-    main()
-finally:
     try:
-        os.remove(path_to_lock_file)
-    except FileNotFoundError:
-        print(
-            f"WARNING: the {path_to_lock_file} file was deleted during script execution"
-            + ", so something might have gone wrong."
-        )
+        path_to_db = os.path.expanduser(path_to_db)
+        if save:
+            if CONFIG.path_to_db != path_to_db:
+                CONFIG.path_to_db = path_to_db
+            if CONFIG.path_to_downloads != path_to_downloads:
+                CONFIG.path_to_downloads = path_to_downloads
+            if CONFIG.site != site:
+                CONFIG.site = site
+            CONFIG.save()
+
+        if add:
+            add_anime(sites[site], path_to_db)
+        elif remove:
+            remove_anime(path_to_db)
+        elif download:
+            download_anime_episodes(path_to_db, path_to_downloads)
+        elif auto_download:
+            auto_download_anime_episodes(path_to_db, path_to_downloads)
+        elif list_db:
+            library.print_db(CONFIG.path_to_db)
+        elif list_recent_anime:
+            print_recent_anime(sites[site])
+        elif print_sites:
+            print_anime_sites()
+    except KeyError:
+        print("This site is not supported.")
+    finally:
+        try:
+            remove_lock_file()
+        except FileNotFoundError:
+            print(
+                f"WARNING: the {PATH_TO_LOCK_FILE} file was deleted during"
+                + "script execution so something might have gone wrong."
+            )
+
+
+main()
