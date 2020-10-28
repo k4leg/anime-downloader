@@ -2,6 +2,6 @@ anime-downloader
 -------------------------------------------------------------------------------
 
 #### Capabilities 
-![](images/capabilities.jpg)
+![](images/capabilities.png)
 
 #### [License](LICENSE)
