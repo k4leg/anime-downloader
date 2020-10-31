@@ -22,7 +22,7 @@ with open('README.md') as f:
 
 setup(
     name='anime-downloader',
-    version='0.1',
+    version='0.1.0-alpha',
     url='https://github.com/k4leg/anime-downloader',
     author='k4leg',
     author_email='python.bogdan@gmail.com',
@@ -32,7 +32,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Environment :: Console',
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
     ],
     license='GPL-3.0-or-later',
     description='Simple anime downloader',
