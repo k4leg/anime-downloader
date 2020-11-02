@@ -52,8 +52,10 @@ class Anime(library.Anime):
         been updated else `False`.
         """
         playlist = library.Playlist(self._get_links_to_episodes())
-        if hasattr(self, 'playlist'):
+        try:
             self.is_modified_after_update = self.playlist != playlist
+        except AttributeError:
+            self.is_modified_after_update = True
         self.playlist = playlist
 
     def _get_title(self) -> str:

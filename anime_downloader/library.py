@@ -25,6 +25,7 @@ This module exports the following classes:
 This module exports the following functions:
     download                      Downloads a file.
     get_db                        Return the DB.
+    push_db                       Push DB.
     get_page                      Return a page.
     get_updated_releases_from_db  Return a list of updated releases.
     print_db                      Print the DB.
@@ -66,51 +67,14 @@ class Anime(metaclass=ABCMeta):
     Instance of this class contains the `title`, `link` and `playlist`
     attributes.
 
-    This class exports the following methods:
-        update_playlist  Update the playlist.
-        save_to_db       Save an instance to the DB.
-        remove_from_db   Remove an instance from the DB.
+    This class exports the following method:
+        update_playlist  Update the `self.playlist`.
     """
 
     def __init__(self, link: URL, title: Optional[str] = None) -> None:
         self.link = link
         self.title = self._get_title() if title is None else title
         self.update_playlist()
-
-    def save_to_db(self, path_to_db: str = DEFAULT_PATH_TO_DB) -> None:
-        """Save an instance to the DB (and creates it if didn't exist)."""
-        try:
-            with open(path_to_db, 'rb') as f:
-                db: list = pickle.load(f)
-
-            try:
-                index = db.index(self)
-                db.remove(self)
-                db.insert(index, self)
-            except ValueError:
-                db.append(self)
-
-            with open(path_to_db, 'wb') as f:
-                pickle.dump(db, f)
-        except FileNotFoundError:
-            with open(path_to_db, 'xb') as f:
-                pickle.dump([self], f)
-
-    def remove_from_db(self, path_to_db: str = DEFAULT_PATH_TO_DB) -> None:
-        """Remove an instance from the DB.
-
-        Raises `ObjectNotFoundInDBError` if instance isn't in the DB.
-        """
-        with open(path_to_db, 'rb') as f:
-            db: List[Anime] = pickle.load(f)
-
-        try:
-            db.remove(self)
-        except ValueError:
-            raise ObjectNotFoundInDBError(self) from None
-
-        with open(path_to_db, 'wb') as f:
-            pickle.dump(db, f)
 
     @abstractmethod
     def update_playlist(self) -> None:
@@ -208,26 +172,38 @@ class Playlist:
         self,
         episode: Optional[int] = None,
         downloads: str = '~/Downloads',
+        progress_bar: bool = False,
     ) -> None:
         """Download the episode."""
         downloads = os.path.expanduser(downloads)
 
         link = self[episode]
         episode = self.index(link)
-        download(link, dir=downloads, text=f"Downloading episode {episode}")
+        download(
+            link,
+            dir=downloads,
+            text=f"Downloading episode {episode}",
+            progress_bar=progress_bar,
+        )
 
     def download_episodes(
         self,
         episode_start: Optional[int] = None,
         episode_stop: Optional[int] = None,
         downloads: str = '~/Downloads',
+        progress_bar: bool = False,
     ) -> None:
         """Download the episodes."""
         downloads = os.path.expanduser(downloads)
 
         for link in self[episode_start:episode_stop]:
             episode = self.index(link)
-            download(link, dir=downloads, text=f"Downloading episode {episode}")
+            download(
+                link,
+                dir=downloads,
+                text=f"Downloading episode {episode}",
+                progress_bar=progress_bar,
+            )
 
     def index(
         self,
@@ -334,8 +310,8 @@ def download(
         filename: Optional[str] = None,
         dir: str = '.',
         *,
-        download_bar: bool = True,
-        text: str = 'Downloading...',
+        progress_bar: bool = False,
+        text: str = 'Downloading',
         text_end: str = '\n',
 ) -> None:
     """Downloads a file.
@@ -348,7 +324,7 @@ def download(
 
     response = requests.get(link, stream=True)
     size = response.headers.get('Content-Length')
-    if size is None or not download_bar:
+    if size is None or not progress_bar:
         print(text, end=text_end)
         with open(os.path.join(dir, filename), 'xb') as f:
             f.write(response.content)
@@ -367,6 +343,12 @@ def get_db(path_to_db: str) -> list:
     with open(path_to_db, 'rb') as f:
         db = pickle.load(f)
     return db
+
+
+def push_db(db: list, path_to_db: str) -> None:
+    """Push DB."""
+    with open(path_to_db, 'wb') as f:
+        pickle.dump(db, f)
 
 
 def get_page(link: URL, params: Optional[dict] = None) -> BeautifulSoup:
@@ -405,9 +387,45 @@ def print_db(path_to_db: str) -> None:
             print("There is nothing in the DB.")
 
 
-def update_and_save_all_db(path_to_db: str) -> None:
+def update_and_save_all_db(
+    path_to_db: str,
+    *,
+    progress_bar: bool = False,
+    progress_bar_text: Optional[str] = None,
+) -> None:
     """Update all playlists in the DB."""
     db = get_db(path_to_db)
-    for anime in db:
-        anime.update_playlist()
-        anime.save_to_db(path_to_db)
+
+    updated_db = []
+    if progress_bar:
+        with Progress(transient=True) as progress:
+            if progress_bar and progress_bar_text is None:
+                progress_bar_text = "DB update"
+            task = progress.add_task(progress_bar_text, total=len(db))
+            for anime in db:
+                anime.update_playlist()
+                if anime not in updated_db:
+                    updated_db.append(anime)
+                progress.update(task, advance=1)
+    else:
+        for anime in db:
+            anime.update_playlist()
+            if anime not in updated_db:
+                updated_db.append(anime)
+
+    push_db(updated_db, path_to_db)
+
+
+def remove_from_db(obj, path_to_db: str) -> None:
+    """Remove an object from the DB.
+
+    Raises `ObjectNotFoundInDBError` if instance isn't in the DB.
+    """
+    db = get_db(path_to_db)
+
+    try:
+        db.remove(obj)
+    except ValueError:
+        raise ObjectNotFoundInDBError(obj) from None
+
+    push_db(db, path_to_db)
