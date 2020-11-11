@@ -65,14 +65,14 @@ def add_anime(site: ModuleType, path_to_db: str) -> None:
     user_choice = int(input("Enter the number of anime: ")) - 1
     anime = search_query[user_choice]
     db = library.get_db(path_to_db)
-    
+
     try:
         index = db.index(anime)
         del db[index]
         db.insert(index, anime)
     except ValueError:
         db.append(anime)
-    
+
     library.push_db(db, path_to_db)
 
 
@@ -102,7 +102,7 @@ def download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
         episode_start, episode_stop = [i for i in episode.split(':')]
         episode_start = int(episode_start) if episode_start else None
         episode_stop = int(episode_stop) if episode_stop else None
-        anime.playlist.download_anime_episodes(
+        anime.playlist.download_episodes(
             episode_start, episode_stop, path_to_downloads, progress_bar=True
         )
 
