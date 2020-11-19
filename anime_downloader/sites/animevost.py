@@ -141,7 +141,7 @@ def _format_title(title: str) -> str:
     """Formats the title.
 
     Example:
-    >>> _format_title("Бездарная Нана / Munou na Nana")
-    # "Бездарная Нана"
+    >>> _format_title('Бездарная Нана / Munou na Nana")
+    'Бездарная Нана'
     """
     return re.sub(' /.*', '', title)

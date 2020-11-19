@@ -66,9 +66,6 @@ class Anime(metaclass=ABCMeta):
     """
     Instance of this class contains the `title`, `link` and `playlist`
     attributes.
-
-    This class exports the following method:
-        update_playlist  Update the `self.playlist`.
     """
 
     def __init__(self, link: URL, title: Optional[str] = None) -> None:
@@ -102,9 +99,6 @@ class Config:
     """Represent a config object that parse a JSON file.
 
     The attributes of instance of this class represent the JSON file itself.
-
-    This class exports the following method:
-        save  Save config using instance attributes.
     """
 
     def __init__(self, path_to_config: str, **kwargs) -> None:
@@ -158,11 +152,6 @@ class Playlist:
 
     Instance of this class contain the `playlist` attribute that contains a tuple
     of links.
-
-    This class exports the following methods:
-        download           Download the episode.
-        download_episodes  Download the episodes.
-        index              Return first index of value.
     """
 
     def __init__(self, links: Iterable[URL], /) -> None:
