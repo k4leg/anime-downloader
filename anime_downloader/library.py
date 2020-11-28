@@ -50,7 +50,7 @@ import os
 import pickle
 from abc import ABCMeta, abstractmethod
 from functools import total_ordering
-from typing import Iterable, List, NoReturn, Optional, Tuple, Union
+from typing import Iterable, NoReturn, Optional, Tuple, Union
 
 import requests
 from bs4 import BeautifulSoup
@@ -86,10 +86,10 @@ class Anime(metaclass=ABCMeta):
         return f"{class_name}('{self.link}')"
 
     def __eq__(self, other) -> bool:
-        if not isinstance(other, Anime):
-            return NotImplemented
-        return ((self.link, self.title, self.playlist)
-                == (other.link, other.title, other.playlist))
+        if isinstance(other, Anime):
+            return ((self.link, self.title, self.playlist)
+                    == (other.link, other.title, other.playlist))
+        return NotImplemented
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -207,14 +207,14 @@ class Playlist:
         return self.playlist.index(value, start - 1, stop) + 1
 
     def __lt__(self, other) -> bool:
-        if not isinstance(other, Playlist):
-            return NotImplemented
-        return self.playlist < other.playlist
+        if isinstance(other, Playlist):
+            return self.playlist < other.playlist
+        return NotImplemented
 
     def __eq__(self, other) -> bool:
-        if not isinstance(other, Playlist):
-            return NotImplemented
-        return self.playlist == other.playlist
+        if isinstance(other, Playlist):
+            return self.playlist == other.playlist
+        return NotImplemented
 
     def __len__(self) -> int:
         return len(self.playlist)
@@ -295,13 +295,13 @@ class SearchQuery:
 
 
 def download(
-        link: URL,
-        filename: Optional[str] = None,
-        dir: str = '.',
-        *,
-        progress_bar: bool = False,
-        text: str = 'Downloading',
-        text_end: str = '\n',
+    link: URL,
+    filename: Optional[str] = None,
+    dir: str = '.',
+    *,
+    progress_bar: bool = False,
+    text: str = 'Downloading',
+    text_end: str = '\n',
 ) -> None:
     """Downloads a file.
 
