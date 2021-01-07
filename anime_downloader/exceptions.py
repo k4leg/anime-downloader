@@ -20,7 +20,6 @@ This module exports the following exceptions:
         NoEpisodeFoundError
         SearchQueryDidNotReturnAnyResultsError
         UserEnteredIncorrectDataError
-        NotExistsEpisodeError
         NotALinkPassedError
         ObjectNotFoundInDBError
         NoUpdatedReleasesError
@@ -36,7 +35,9 @@ class AnimeException(Exception):
     error_message = ""
 
     def __str__(self):
-        return f"{self.error_message} ({', '.join(self.args)})"
+        if self.args:
+            return f"{self.error_message} ({', '.join(self.args)})"
+        return f"{self.error_message}"
 
 
 class SearchQueryLenError(AnimeException):
@@ -52,10 +53,6 @@ class SearchQueryDidNotReturnAnyResultsError(AnimeException):
 
 
 class UserEnteredIncorrectDataError(AnimeException):
-    pass
-
-
-class NotExistsEpisodeError(AnimeException):
     pass
 
 
