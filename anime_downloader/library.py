@@ -160,7 +160,7 @@ class Playlist:
     def download(
         self,
         episode: Optional[int] = None,
-        downloads: str = '~/Downloads',
+        path_to_downloads: str = '~/Downloads',
         progress_bar: bool = False,
     ) -> None:
         """Download the episode."""
@@ -169,10 +169,10 @@ class Playlist:
         except IndexError:
             raise NoEpisodeFoundError from None
         episode = self.index(link)
-        downloads = os.path.expanduser(downloads)
+        path_to_downloads = os.path.expanduser(path_to_downloads)
         download(
             link,
-            dir=downloads,
+            dir=path_to_downloads,
             text=f"Downloading episode {episode}",
             progress_bar=progress_bar,
         )
@@ -181,7 +181,7 @@ class Playlist:
         self,
         episode_start: Optional[int] = None,
         episode_stop: Optional[int] = None,
-        downloads: str = '~/Downloads',
+        path_to_downloads: str = '~/Downloads',
         progress_bar: bool = False,
     ) -> None:
         """Download the episodes."""
@@ -189,12 +189,12 @@ class Playlist:
             episodes = self[episode_start:episode_stop]
         except IndexError:
             raise NoEpisodeFoundError from None
-        downloads = os.path.expanduser(downloads)
+        path_to_downloads = os.path.expanduser(path_to_downloads)
         for link in episodes:
             episode = self.index(link)
             download(
                 link,
-                dir=downloads,
+                dir=path_to_downloads,
                 text=f"Downloading episode {episode}",
                 progress_bar=progress_bar,
             )

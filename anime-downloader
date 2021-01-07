@@ -118,7 +118,7 @@ def auto_download_anime_episodes(path_to_db: str, path_to_downloads: str) -> Non
     for anime in updated_anime:
         title = anime.title
         print(f"Downloading the episode of the '{title}' release")
-        anime.playlist.download(downloads=path_to_downloads, progress_bar=True)
+        anime.playlist.download(path_to_downloads=path_to_downloads, progress_bar=True)
 
 
 def print_recent_anime(site: ModuleType) -> None:
