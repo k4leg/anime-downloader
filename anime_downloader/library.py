@@ -16,27 +16,29 @@
 """Core classes and functions.
 
 This module exports the following classes:
-    Anime        Instance of this class contains the `title`, `link` and
-                 `playlist` attributes.
-    Config       Represent a config object that parse a JSON file.
-    Playlist     Represent a playlist object.
+    Anime  Instance of this class contains the `title`, `link` and
+           `playlist` attributes.
+    Config  Represent a config object that parse a JSON file.
+    Playlist  Represent a playlist object.
     SearchQuery  Represent a search query object.
 
 This module exports the following functions:
-    download                      Downloads a file.
-    get_db                        Return the DB.
-    push_db                       Push DB.
-    get_page                      Return a page.
+    download  Downloads a file.
+    get_db  Return the DB.
+    push_db  Push DB.
+    get_page  Return a page.
     get_updated_releases_from_db  Return a list of updated releases.
-    print_db                      Print the DB.
-    update_and_save_all_db        Update all playlists in the DB.
+    print_db  Print the DB.
+    update_and_save_all_db  Update all playlists in the DB.
 """
 
 __all__ = [
     'Anime',
     'Config',
+    'DEFAULT_PATH_TO_DB',
     'Playlist',
     'SearchQuery',
+    'URL',
     'download',
     'get_db',
     'get_page',
@@ -91,14 +93,15 @@ class Anime(metaclass=ABCMeta):
                     == (other.link, other.title, other.playlist))
         return NotImplemented
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         return not self.__eq__(other)
 
 
 class Config:
     """Represent a config object that parse a JSON file.
 
-    The attributes of instance of this class represent the JSON file itself.
+    The attributes of instance of this class represent the JSON file
+    itself.
     """
 
     def __init__(self, path_to_config: str, **kwargs) -> None:
@@ -140,7 +143,8 @@ class Config:
 
     def _set_dict_as_attrs(self, attrs: dict, /) -> None:
         """
-        Concatenate `self.__dict__` and `attrs`, replacing objects from `attrs` if any.
+        Concatenate `self.__dict__` and `attrs`, replacing objects from
+        `attrs`if any.
         """
         for key, value in attrs.items():
             setattr(self, key, value)
@@ -150,8 +154,8 @@ class Config:
 class Playlist:
     """Represent a playlist object.
 
-    Instance of this class contain the `playlist` attribute that contains a tuple
-    of links.
+    Instance of this class contain the `playlist` attribute that
+    contains a tuple of links.
     """
 
     def __init__(self, links: Iterable[URL], /) -> None:
@@ -224,11 +228,14 @@ class Playlist:
     def __len__(self) -> int:
         return len(self.playlist)
 
-    def __getitem__(self, key: Union[int, slice, None]) -> Union[URL, Tuple[URL, ...]]:
+    def __getitem__(
+        self, key: Union[int, slice, None]
+    ) -> Union[URL, Tuple[URL, ...]]:
         """
-        The index starts at 1 and ends at `len(self)` inclusive.  If `None` was
-        passed then the last element is returned.  When slicing, you can only
-        specify indices that exist (that is, from 1 to `len(self)`) or `None`.
+        The index starts at 1 and ends at `len(self)` inclusive.  If
+        `None` was passed then the last element is returned.  When
+        slicing, you can only specify indices that exist (that is, from
+        1 to `len(self)`) or `None`.
 
         Raises a `TypeError` on an unsupported type.
         """
@@ -257,11 +264,13 @@ class Playlist:
 class SearchQuery:
     """Represent a search query object.
 
-    Instance of this class contain a `releases` attribute.  This type object is
-    immutable.
+    Instance of this class contain a `releases` attribute.  This type
+    object is immutable.
     """
 
-    def __init__(self, search_query_text: str, /, *, format: bool = True) -> None:
+    def __init__(
+        self, search_query_text: str, /, *, format: bool = True
+    ) -> None:
         object.__setattr__(self, '_search_query_text', search_query_text)
         object.__setattr__(self, '_format', format)
         object.__setattr__(self, 'releases', self._get_search_query_results())
@@ -270,8 +279,8 @@ class SearchQuery:
     def _get_search_query_results(self) -> Tuple[Anime, ...]:
         """Return a tuple of releases.
 
-        Raises `SearchQueryDidNotReturnAnyResultsError` if search query return an
-        empty release list.
+        Raises `SearchQueryDidNotReturnAnyResultsError` if search query
+        return an empty release list.
         """
 
     def __bool__(self) -> bool:
@@ -288,12 +297,16 @@ class SearchQuery:
     def __len__(self) -> int:
         return len(self.releases)
 
-    def __getitem__(self, key: Union[int, slice]) -> Union[Anime, Tuple[Anime, ...]]:
+    def __getitem__(
+        self, key: Union[int, slice]
+    ) -> Union[Anime, Tuple[Anime, ...]]:
         return self.releases[key]
 
     def __setitem__(self, key, value) -> NoReturn:
         class_name = self.__class__.__name__
-        raise TypeError(f"'{class_name}' object does not support item assignment")
+        raise TypeError(
+            f"'{class_name}' object does not support item assignment"
+        )
 
     def __iter__(self) -> Iterable[Anime]:
         return iter(self.releases)
@@ -310,8 +323,9 @@ def download(
 ) -> None:
     """Downloads a file.
 
-    Prints the text to the progress bar or prints the text if it is disabled or
-    information about the size of the downloaded file was not received.
+    Prints the text to the progress bar or prints the text if it is
+    disabled or information about the size of the downloaded file was
+    not received.
     """
     if filename is None:
         filename = os.path.basename(link)

@@ -13,15 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Provides classes and functions for interacting with the 'animevost.org' site.
+"""
+Provides classes and functions for interacting with the 'animevost.org'
+site.
 
 This module exports the following classes:
     Anime
     SearchQuery
 
 This module exports the following function:
-    get_recent_anime  Return a list of the latest releases from the animevost
-                      site.
+    get_recent_anime  Return a list of the latest releases from the
+                      'animevost.org' site.
 """
 
 __all__ = ['Anime', 'SearchQuery', 'get_recent_anime']
@@ -33,8 +35,8 @@ import requests
 
 from anime_downloader import library
 from anime_downloader.exceptions import *
+from anime_downloader.library import URL
 
-URL = str
 ANIMEVOST_LINK = 'https://animevost.org'
 
 
@@ -48,8 +50,8 @@ class Anime(library.Anime):
     def update_playlist(self) -> None:
         """Update `self.playlist`.
 
-        Sets `self.is_modified_after_update` to `True` if `self.playlist` has
-        been updated else `False`.
+        Sets `self.is_modified_after_update` to `True` if
+        `self.playlist` has been updated else `False`.
         """
         playlist = library.Playlist(self._get_links_to_episodes())
         try:
@@ -92,8 +94,8 @@ class SearchQuery(library.SearchQuery):
     def _get_search_query_results(self) -> Tuple[Anime, ...]:
         """Return a tuple of releases.
 
-        Raises `SearchQueryDidNotReturnAnyResultsError` if search query return an
-        empty release list.
+        Raises `SearchQueryDidNotReturnAnyResultsError` if search query
+        return an empty release list.
         """
         if len(self._search_query_text) < 4:
             raise SearchQueryLenError
@@ -141,7 +143,7 @@ def _format_title(title: str) -> str:
     """Formats the title.
 
     Example:
-    >>> _format_title('Бездарная Нана / Munou na Nana")
+    >>> _format_title('Бездарная Нана / Munou na Nana')
     'Бездарная Нана'
     """
     return re.sub(' /.*', '', title)

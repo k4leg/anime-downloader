@@ -18,6 +18,7 @@
 """The command interface for the `anime_downloader` module."""
 
 import os
+import sys
 from types import ModuleType
 
 import click
@@ -90,8 +91,10 @@ def download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
     library.print_db(path_to_db)
 
     anime_index = int(
-        input("Enter the release number for which you want to download the"
-              + " episode(s): ")
+        input(
+            "Enter the release number for which you want to download the"
+            " episode(s): "
+        )
     ) - 1
     anime = library.get_db(path_to_db)[anime_index]
     episode = input("Enter the episode(s) you want to download: ")
@@ -107,18 +110,21 @@ def download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
         )
 
 
-def auto_download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
+def auto_download_anime_episodes(
+    path_to_db: str, path_to_downloads: str
+) -> None:
     library.update_and_save_all_db(path_to_db, progress_bar=True)
     try:
         updated_anime = library.get_updated_anime_from_db(path_to_db)
     except NoUpdatedReleasesError:
         print("Nothing to do.")
-        import sys
         sys.exit()
     for anime in updated_anime:
         title = anime.title
         print(f"Downloading the episode of the '{title}' release")
-        anime.playlist.download(path_to_downloads=path_to_downloads, progress_bar=True)
+        anime.playlist.download(
+            path_to_downloads=path_to_downloads, progress_bar=True
+        )
 
 
 def print_recent_anime(site: ModuleType) -> None:
@@ -223,7 +229,7 @@ def main(
         except FileNotFoundError:
             print(
                 f"WARNING: the {PATH_TO_LOCK_FILE} file was deleted during"
-                + "script execution so something might have gone wrong."
+                " script execution so something might have gone wrong."
             )
 
 
