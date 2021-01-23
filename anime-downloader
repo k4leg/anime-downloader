@@ -60,12 +60,15 @@ def remove_lock_file() -> None:
 def add_anime(site: ModuleType, path_to_db: str) -> None:
     search_query = site.SearchQuery(input("Enter your search query: "))
     for n, anime in enumerate(search_query, 1):
-        title, link = anime.title, anime.link
-        print(f"{n}. {title} ({link})")
+        title, url = anime.title, anime.url
+        print(f"{n}. {title} ({url})")
 
     user_choice = int(input("Enter the number of anime: ")) - 1
     anime = search_query[user_choice]
-    db = library.get_db(path_to_db)
+    try:
+        db = library.get_db(path_to_db)
+    except FileNotFoundError:
+        db = []
 
     try:
         index = db.index(anime)
@@ -81,7 +84,7 @@ def remove_anime(path_to_db: str) -> None:
     library.print_db(path_to_db)
 
     anime_index_for_delete = int(
-        input("Enter the release number you want to remove: ")
+        input("Enter the anime number you want to remove: ")
     ) - 1
     db = library.get_db(path_to_db)
     library.remove_from_db(db[anime_index_for_delete], path_to_db)
@@ -92,7 +95,7 @@ def download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
 
     anime_index = int(
         input(
-            "Enter the release number for which you want to download the"
+            "Enter the anime number for which you want to download the"
             " episode(s): "
         )
     ) - 1
@@ -116,12 +119,12 @@ def auto_download_anime_episodes(
     library.update_and_save_all_db(path_to_db, progress_bar=True)
     try:
         updated_anime = library.get_updated_anime_from_db(path_to_db)
-    except NoUpdatedReleasesError:
+    except AnimeListHasNotBeenUpdatedError:
         print("Nothing to do.")
         sys.exit()
     for anime in updated_anime:
         title = anime.title
-        print(f"Downloading the episode of the '{title}' release")
+        print(f"Downloading the episode of the '{title}' anime")
         anime.playlist.download(
             path_to_downloads=path_to_downloads, progress_bar=True
         )
@@ -135,8 +138,8 @@ def print_recent_anime(site: ModuleType) -> None:
     else:
         recent_anime.reverse()
         for n, anime in zip(range(len(recent_anime), 0, -1), recent_anime):
-            title, link = anime.title, anime.link
-            print(f"{n}. {title} ({link})")
+            title, url = anime.title, anime.url
+            print(f"{n}. {title} ({url})")
 
 
 def print_anime_sites() -> None:
@@ -145,14 +148,14 @@ def print_anime_sites() -> None:
 
 
 @click.command()
-@click.option("-a", "--add", is_flag=True, help="add a release to the DB")
-@click.option("-r", "--remove", is_flag=True, help="remove release from DB")
+@click.option("-a", "--add", is_flag=True, help="add a anime to the DB")
+@click.option("-r", "--remove", is_flag=True, help="remove anime from DB")
 @click.option("-d", "--download", is_flag=True, help="download episode(s)")
 @click.option(
     "-ad",
     "--auto-download",
     is_flag=True,
-    help="download the latest episodes of releases that have added episodes",
+    help="download the latest episodes of anime that have added episodes",
 )
 @click.option(
     "--path-to-downloads",

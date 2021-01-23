@@ -22,7 +22,7 @@ This module exports the following classes:
     SearchQuery
 
 This module exports the following function:
-    get_recent_anime  Return a list of the latest releases from the
+    get_recent_anime  Return a list of the latest anime from the
                       'animevost.org' site.
 """
 
@@ -35,14 +35,13 @@ import requests
 
 from anime_downloader import library
 from anime_downloader.exceptions import *
-from anime_downloader.library import URL
 
-ANIMEVOST_LINK = 'https://animevost.org'
+ANIMEVOST_URL = 'https://animevost.org'
 
 
 class Anime(library.Anime):
-    def __init__(self, link: URL, title: Optional[str] = None) -> None:
-        self.link = link
+    def __init__(self, url: str, title: Optional[str] = None) -> None:
+        self.url = url
         self.title = self._get_title() if title is None else title
         self.id = self._get_id()
         self.update_playlist()
@@ -53,7 +52,7 @@ class Anime(library.Anime):
         Sets `self.is_modified_after_update` to `True` if
         `self.playlist` has been updated else `False`.
         """
-        playlist = library.Playlist(self._get_links_to_episodes())
+        playlist = library.Playlist(self._get_urls_to_episodes())
         try:
             self.is_modified_after_update = self.playlist != playlist
         except AttributeError:
@@ -62,7 +61,7 @@ class Anime(library.Anime):
 
     def _get_title(self) -> str:
         """Return the title."""
-        page = library.get_page(self.link)
+        page = library.get_page(self.url)
         title = page.find(class_='shortstoryHead')
         title = str(title.h1.string).strip()
         return _format_title(title)
@@ -70,32 +69,32 @@ class Anime(library.Anime):
     def _get_id(self) -> int:
         """Return the id."""
         try:
-            return int(re.search(r'(?<=/)\d+(?=-)', self.link).group())
+            return int(re.search(r'(?<=/)\d+(?=-)', self.url).group())
         except AttributeError:
-            raise LinkHasNoIDError(self.link) from None
+            raise URLHasNoIDError(self.url) from None
 
-    def _get_links_to_episodes(self) -> List[URL]:
-        """Return a list of episodes links."""
-        links_to_episodes = requests.post(
+    def _get_urls_to_episodes(self) -> List[str]:
+        """Return a list of episodes urls."""
+        urls_to_episodes = requests.post(
             'https://api.animevost.org/v1/playlist', {'id': self.id}
         ).json()
         res = {}
-        for i in links_to_episodes:
+        for i in urls_to_episodes:
             try:
                 episode = int(re.search(r'\d+', i['name']).group())
             except AttributeError:
                 episode = float('-inf')
-            link = i['hd']
-            res[episode] = link
+            url = i['hd']
+            res[episode] = url
         return [res[i] for i in sorted(res)]
 
 
 class SearchQuery(library.SearchQuery):
     def _get_search_query_results(self) -> Tuple[Anime, ...]:
-        """Return a tuple of releases.
+        """Return a tuple of anime.
 
         Raises `SearchQueryDidNotReturnAnyResultsError` if search query
-        return an empty release list.
+        return an empty list of anime.
         """
         if len(self._search_query_text) < 4:
             raise SearchQueryLenError
@@ -108,34 +107,34 @@ class SearchQuery(library.SearchQuery):
             'result_from': '1',
             'story': self._search_query_text,
         }
-        animevost = library.get_page(ANIMEVOST_LINK, search_query_params)
+        animevost = library.get_page(ANIMEVOST_URL, search_query_params)
         animevost = animevost(class_='shortstory')
 
-        links = [str(i.a['href']) for i in animevost]
+        urls = [str(i.a['href']) for i in animevost]
         titles = [str(i.a.string) for i in animevost]
         res = []
-        for link, title in zip(links, titles):
+        for url, title in zip(urls, titles):
             if self._format:
                 title = _format_title(title)
-            res.append(Anime(link, title))
+            res.append(Anime(url, title))
         if not res:
             raise SearchQueryDidNotReturnAnyResultsError
         return tuple(res)
 
 
 def get_recent_anime(*, format: bool = True) -> List[Anime]:
-    """Return a list of the latest releases from the animevost site."""
-    animevost = library.get_page(ANIMEVOST_LINK)
-    animevost = animevost.find(class_='raspis raspis_fixed')
-    animevost = animevost('a')
+    """Return a list of the latest anime from the animevost site."""
+    animevost = library.get_page(ANIMEVOST_URL)
+    recent_anime_list = animevost.find(class_='raspis raspis_fixed')
+    recent_anime_list = recent_anime_list('a')
 
-    links = [str(i['href']) for i in animevost]
-    titles = [str(i.string) for i in animevost]
+    urls = [str(i['href']) for i in recent_anime_list]
+    titles = [str(i.string) for i in recent_anime_list]
     res = []
-    for link, title in zip(links, titles):
+    for url, title in zip(urls, titles):
         if format:
             title = _format_title(title)
-        res.append(Anime(link, title))
+        res.append(Anime(url, title))
     return res
 
 

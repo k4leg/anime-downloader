@@ -20,14 +20,13 @@ This module exports the following exceptions:
         NoEpisodeFoundError
         SearchQueryDidNotReturnAnyResultsError
         UserEnteredIncorrectDataError
-        NotALinkPassedError
         ObjectNotFoundInDBError
-        NoUpdatedReleasesError
+        AnimeListHasNotBeenUpdatedError
         NoDBError
         UndefinedBehaviorError
         AnotherInstanceAlreadyRunError
         NotEnoughArgumentsToInitializeError
-        LinkHasNoIDError
+        URLHasNoIDError
 """
 
 
@@ -56,15 +55,11 @@ class UserEnteredIncorrectDataError(AnimeException):
     pass
 
 
-class NotALinkPassedError(AnimeException):
-    pass
-
-
 class ObjectNotFoundInDBError(AnimeException):
     pass
 
 
-class NoUpdatedReleasesError(AnimeException):
+class AnimeListHasNotBeenUpdatedError(AnimeException):
     pass
 
 
@@ -84,5 +79,5 @@ class NotEnoughArgumentsToInitializeError(AnimeException):
     pass
 
 
-class LinkHasNoIDError(AnimeException):
+class URLHasNoIDError(AnimeException):
     pass
