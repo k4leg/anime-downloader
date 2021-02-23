@@ -107,20 +107,20 @@ def download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
     episode = input("Enter the episode(s) you want to download: ")
     try:
         episode = int(episode) if episode else None
-        anime.playlist.download(episode, path_to_downloads, progress_bar=True)
+        anime.playlist.download(episode, path_to_downloads)
     except ValueError:
         episode_start, episode_stop = [i for i in episode.split(':')]
         episode_start = int(episode_start) if episode_start else None
         episode_stop = int(episode_stop) if episode_stop else None
         anime.playlist.download_episodes(
-            episode_start, episode_stop, path_to_downloads, progress_bar=True
+            episode_start, episode_stop, path_to_downloads
         )
 
 
 def auto_download_anime_episodes(
     path_to_db: str, path_to_downloads: str
 ) -> None:
-    library.update_and_save_all_db(path_to_db, progress_bar=True)
+    library.update_and_save_all_db(path_to_db)
     try:
         updated_anime = library.get_updated_anime_from_db(path_to_db)
     except AnimeListHasNotBeenUpdatedError:
@@ -129,9 +129,7 @@ def auto_download_anime_episodes(
     for anime in updated_anime:
         title = anime.title
         print(f"Downloading the episode of the '{title}' anime")
-        anime.playlist.download(
-            path_to_downloads=path_to_downloads, progress_bar=True
-        )
+        anime.playlist.download(path_to_downloads=path_to_downloads)
 
 
 def print_recent_anime(site: ModuleType) -> None:

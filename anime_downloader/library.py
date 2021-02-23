@@ -23,7 +23,6 @@ This module exports the following classes:
     SearchQuery  Represent a search query object.
 
 This module exports the following functions:
-    download  Downloads a file.
     get_db  Return the DB.
     push_db  Push DB.
     get_page  Return a page.
@@ -38,7 +37,6 @@ __all__ = [
     'DEFAULT_PATH_TO_DB',
     'Playlist',
     'SearchQuery',
-    'download',
     'get_db',
     'get_page',
     'get_updated_anime_from_db',
@@ -57,6 +55,7 @@ import requests
 from bs4 import BeautifulSoup
 from rich.progress import Progress
 
+from anime_downloader.downloader import Downloader
 from anime_downloader.exceptions import *
 
 DEFAULT_PATH_TO_DB = os.path.expanduser('~/.config/anime-downloader/db')
@@ -163,43 +162,26 @@ class Playlist:
         self,
         episode: Optional[int] = None,
         path_to_downloads: str = '~/Downloads',
-        progress_bar: bool = False,
     ) -> None:
         """Download the episode."""
         try:
             url = self[episode]
         except IndexError:
             raise NoEpisodeFoundError from None
-        episode = self.index(url)
-        path_to_downloads = os.path.expanduser(path_to_downloads)
-        download(
-            url,
-            dir=path_to_downloads,
-            text=f"Downloading episode {episode}",
-            progress_bar=progress_bar,
-        )
+        Downloader([url], path_to_downloads)
 
     def download_episodes(
         self,
         episode_start: Optional[int] = None,
         episode_stop: Optional[int] = None,
         path_to_downloads: str = '~/Downloads',
-        progress_bar: bool = False,
     ) -> None:
         """Download the episodes."""
         try:
             episodes = self[episode_start:episode_stop]
         except IndexError:
             raise NoEpisodeFoundError from None
-        path_to_downloads = os.path.expanduser(path_to_downloads)
-        for url in episodes:
-            episode = self.index(url)
-            download(
-                url,
-                dir=path_to_downloads,
-                text=f"Downloading episode {episode}",
-                progress_bar=progress_bar,
-            )
+        Downloader(episodes, path_to_downloads)
 
     def index(
         self,
@@ -312,40 +294,6 @@ class SearchQuery:
         return iter(self.anime_list)
 
 
-def download(
-    url: str,
-    filename: Optional[str] = None,
-    dir: str = '.',
-    *,
-    progress_bar: bool = False,
-    text: str = 'Downloading',
-    text_end: str = '\n',
-) -> None:
-    """Downloads a file.
-
-    Prints the text to the progress bar or prints the text if it is
-    disabled or information about the size of the downloaded file was
-    not received.
-    """
-    if filename is None:
-        filename = os.path.basename(url)
-
-    response = requests.get(url, stream=True)
-    size = response.headers.get('Content-Length')
-    if size is None or not progress_bar:
-        print(text, end=text_end)
-        with open(os.path.join(dir, filename), 'xb') as f:
-            f.write(response.content)
-    else:
-        size = int(size)
-        with Progress(transient=True) as progress:
-            task = progress.add_task(text, total=100)
-            with open(os.path.join(dir, filename), 'xb') as f:
-                for data in response.iter_content(chunk_size=size // 100):
-                    f.write(data)
-                    progress.update(task, advance=1)
-
-
 def get_db(path_to_db: str) -> list:
     """Return the DB."""
     with open(path_to_db, 'rb') as f:
@@ -359,10 +307,10 @@ def push_db(db: list, path_to_db: str) -> None:
         pickle.dump(db, f)
 
 
-def get_page(url: str, params: Optional[dict] = None) -> BeautifulSoup:
+def get_page(url: str, **kwargs) -> BeautifulSoup:
     """Return a page."""
-    site = requests.get(url, params)
-    return BeautifulSoup(site.text, 'html.parser')
+    response = requests.get(url, **kwargs)
+    return BeautifulSoup(response.content, 'html.parser')
 
 
 def get_updated_anime_from_db(path_to_db: str) -> list:

@@ -107,7 +107,7 @@ class SearchQuery(library.SearchQuery):
             'result_from': '1',
             'story': self._search_query_text,
         }
-        animevost = library.get_page(ANIMEVOST_URL, search_query_params)
+        animevost = library.get_page(ANIMEVOST_URL, params=search_query_params)
         animevost = animevost(class_='shortstory')
 
         urls = [str(i.a['href']) for i in animevost]
