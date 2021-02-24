@@ -38,7 +38,7 @@ setup(
     description='Simple anime downloader',
     long_description=README,
     long_description_content_type='text/markdown',
-    keywords='anime',
+    keywords=['anime'],
     python_requires='>=3.8',
     requires=['beautifulsoup4', 'click', 'requests', 'rich'],
     packages=find_packages(),

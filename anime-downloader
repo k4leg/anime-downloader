@@ -92,6 +92,10 @@ def remove_anime(path_to_db: str) -> None:
 
 def download_anime_episodes(path_to_db: str, path_to_downloads: str) -> None:
     library.print_db(path_to_db)
+    try:
+        library.get_db(path_to_db)
+    except FileNotFoundError:
+        sys.exit()
 
     anime_index = int(
         input(
